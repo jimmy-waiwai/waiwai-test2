@@ -2,38 +2,45 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main] # デプロイ対象のブランチ名
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+    branches:
+      - main # mainブランチにpushされたら実行
 
 jobs:
-  build_deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20 # Nuxt 4が推奨するNode.jsバージョン
+          node-version: '20' # またはお使いのバージョン
 
+      # パッケージのインストールとビルド
       - name: Install dependencies
-        run: npm install # または pnpm/yarn
+        run: npm ci
 
-      - name: Build and Prerender
-        run: npx nuxt build --preset github_pages
-        env:
-          # サブパス（例: https://<user>.github.io/<repo>/）で公開する場合に必要
-          NUXT_APP_BASE_URL: /waiwai-test2/ 
+      - name: Build
+        run: npm run generate # 静的サイトを生成 (distフォルダ)
+
+      # GitHub Pagesへの配置
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .output/public
+          path: './.output/public' # Nuxt 3/4のデフォルトの出力先
 
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+    
+    # 権限の設定
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
